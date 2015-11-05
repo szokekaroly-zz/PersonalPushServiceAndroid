@@ -1,10 +1,14 @@
 package org.szoke.karoly.ppstest;
 
+import android.content.ActivityNotFoundException;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
@@ -12,6 +16,7 @@ import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
@@ -109,6 +114,17 @@ public class MainActivity extends AppCompatActivity {
         mMessages = new ArrayList<>();
         mAdapter = new ArrayAdapter(MainActivity.this,android.R.layout.simple_list_item_1, mMessages);
         lvMessages.setAdapter(mAdapter);
+        lvMessages.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(mAdapter.getItem(position).toString()));
+                try {
+                    startActivity(intent);
+                } catch (ActivityNotFoundException e) {
+                    Toast.makeText(MainActivity.this, mAdapter.getItem(position).toString(), Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
 
         getPreferences();
         setVisibility();
@@ -128,18 +144,22 @@ public class MainActivity extends AppCompatActivity {
             lvMessages.setVisibility(View.VISIBLE);
             edMessage.setVisibility(View.VISIBLE);
             btSend.setVisibility(View.VISIBLE);
+            if ( ! isNetworkAvailable() ) {
+                btSend.setEnabled(false);
+            }
             btSend.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     if (edMessage.getText() != null) {
-                        String params = null;
+                        String params;
                         try {
                             params = "channel=" + URLEncoder.encode(mChannel, "UTF-8") + "&device=" +
                                     URLEncoder.encode(mDevice, "UTF-8") + "&msg=" + URLEncoder.encode(edMessage.getText().toString(), "UTF-8");
+                            new AsyncHttpTask(BROADCAST_SEND).execute(SERVICE_URL + SEND, params);
                         } catch (UnsupportedEncodingException e) {
                             e.printStackTrace();
+                            Toast.makeText(getBaseContext(),"Csatorna hiba, nem lehet üzenetet küldeni.",Toast.LENGTH_LONG).show();
                         }
-                        new AsyncHttpTask(BROADCAST_SEND).execute(SERVICE_URL + SEND, params);
                     }
                 }
             });
@@ -147,6 +167,9 @@ public class MainActivity extends AppCompatActivity {
             mSocket.connect();
         } else {
             edDevice.setText(Build.MODEL);
+            if ( ! isNetworkAvailable() ) {
+                btLogin.setEnabled(false);
+            }
             btLogin.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
@@ -177,6 +200,15 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private boolean isNetworkAvailable() {
+        ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo networkInfo = connectivityManager.getActiveNetworkInfo();
+        if (networkInfo == null) {
+            Toast.makeText(MainActivity.this, "Az internet nem elérhető, kapcsolaja be a hálózatot!", Toast.LENGTH_SHORT).show();
+        }
+        return  networkInfo != null && networkInfo.isConnected();
+    }
+
     @Override
     protected void onResume() {
         super.onResume();
@@ -204,7 +236,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onReceive(Context context, Intent intent) {
             String result = intent.getStringExtra("response");
-            JSONObject response = null;
+            JSONObject response;
             try {
                 response = new JSONObject(result);
                 if (response.getString("status").equals("OK")) {
@@ -233,7 +265,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onReceive(Context context, Intent intent) {
             String result = intent.getStringExtra("response");
-            JSONObject response = null;
+            JSONObject response;
             try {
                 response = new JSONObject(result);
                 if (response.getString("status").equals("OK")) {
@@ -263,7 +295,7 @@ public class MainActivity extends AppCompatActivity {
                             String status = data.getString("status");
                             if (status.equals("OK")) {
                                 String msg = data.getString("msg");
-                                mMessages.add(msg);
+                                mMessages.add(0, msg);
                                 mAdapter.notifyDataSetChanged();
                             }
                         } catch (JSONException e) {
@@ -298,12 +330,12 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         protected String doInBackground(String... params) {
-            InputStream inputStream = null;
-            String post= null;
+            InputStream inputStream;
+            String post;
             String result = null;
 
             post = params[1];
-            HttpURLConnection urlConnection = null;
+            HttpURLConnection urlConnection;
 
             try {
                 URL url = new URL(params[0]);
@@ -328,6 +360,7 @@ public class MainActivity extends AppCompatActivity {
                     inputStream = new BufferedInputStream(urlConnection.getInputStream());
                     result = convertInputStreamToString(inputStream);
                 }else{
+                    Toast.makeText(getApplicationContext(),"HTTP hiba:" + statusCode, Toast.LENGTH_LONG).show();
                     result = null;
                 }
 
@@ -342,16 +375,13 @@ public class MainActivity extends AppCompatActivity {
 
             BufferedReader bufferedReader = new BufferedReader( new InputStreamReader(inputStream));
 
-            String line = "";
+            String line;
             String result = "";
 
             while((line = bufferedReader.readLine()) != null){
                 result += line;
             }
-
-            if(inputStream != null){
-                inputStream.close();
-            }
+            inputStream.close();
 
             return result;
         }

@@ -5,7 +5,7 @@ android {
     buildToolsVersion "23.0.1"
 
     defaultConfig {
-        applicationId "org.szoke.karoly.myapplication"
+        applicationId "org.szoke.karoly.personalpushservicetestclient"
         minSdkVersion 15
         targetSdkVersion 23
         versionCode 1
