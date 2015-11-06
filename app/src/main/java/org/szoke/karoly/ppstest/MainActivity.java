@@ -25,6 +25,7 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -57,8 +58,10 @@ public class MainActivity extends AppCompatActivity {
     private static final String CHANNEL_EVENT = "pps_channel";
     private static final String REGISTER = "/login/register_device";
     private static final String SEND = "/home/send_by_device";
+    private static final String GET_ALL = "/home/get_all_messages";
     private static final String BROADCAST_REGISTER = "REGISTER";
     private static final String BROADCAST_SEND = "SEND";
+    private static final String BROADCAST_GET_ALL = "GETALL";
 
     private TextView tvEmail;
     private TextView tvPassword;
@@ -128,7 +131,22 @@ public class MainActivity extends AppCompatActivity {
 
         getPreferences();
         setVisibility();
+        getAllMessages();
 
+    }
+
+    private void getAllMessages() {
+        String params;
+        if (mChannel != null && mDevice != null) {
+            try {
+                LocalBroadcastManager.getInstance(MainActivity.this).registerReceiver(mGetAllMessages, new IntentFilter(BROADCAST_GET_ALL));
+                params = "channel=" + URLEncoder.encode(mChannel, "UTF-8") + "&device=" +
+                        URLEncoder.encode(mDevice, "UTF-8");
+                new AsyncHttpTask(BROADCAST_GET_ALL).execute(SERVICE_URL + GET_ALL, params);
+            } catch (UnsupportedEncodingException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     private void setVisibility() {
@@ -252,6 +270,7 @@ public class MainActivity extends AppCompatActivity {
                     mSocket.on(mChannel, onNewMessage);
                     mSocket.connect();
                     setVisibility();
+                    getAllMessages();
                 } else {
                     Toast.makeText(getBaseContext(), response.getString("msg"), Toast.LENGTH_LONG).show();
                 }
@@ -277,6 +296,26 @@ public class MainActivity extends AppCompatActivity {
             } catch (JSONException e) {
                 e.printStackTrace();
             }
+        }
+    };
+
+    private BroadcastReceiver mGetAllMessages = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String result = intent.getStringExtra("response");
+            Log.v("getallmsg",result);
+            try {
+                JSONArray messages = new JSONArray(result);
+                for (int i = 0; i < messages.length(); i++) {
+                    JSONObject msg = messages.getJSONObject(i);
+                    String message = msg.getString("message");
+                    mMessages.add(0, message);
+                }
+                mAdapter.notifyDataSetChanged();
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+            LocalBroadcastManager.getInstance(MainActivity.this).unregisterReceiver(mGetAllMessages);
         }
     };
 
@@ -360,7 +399,7 @@ public class MainActivity extends AppCompatActivity {
                     inputStream = new BufferedInputStream(urlConnection.getInputStream());
                     result = convertInputStreamToString(inputStream);
                 }else{
-                    Toast.makeText(getApplicationContext(),"HTTP hiba:" + statusCode, Toast.LENGTH_LONG).show();
+                    Log.e("HTTP POST","HTTP hiba:" + statusCode);
                     result = null;
                 }
 
