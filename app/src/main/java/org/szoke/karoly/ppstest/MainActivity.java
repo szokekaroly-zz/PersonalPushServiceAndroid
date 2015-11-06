@@ -53,8 +53,10 @@ public class MainActivity extends AppCompatActivity {
     public static final String DEVICE_PREF = "device_pref";
     public static final String CHANNEL = "channel";
     public static final String DEVICE = "device";
-    private static final String SERVICE_URL = "http://192.168.0.6/pps/index.php";
-    private static final String CHANNEL_URL = "http://192.168.0.6:3000";
+    //private static final String SERVICE_URL = "http://192.168.0.6/pps/index.php";
+    private static final String SERVICE_URL = "https://pps-szokekaroly.rhcloud.com/index.php";
+    //private static final String CHANNEL_URL = "http://192.168.0.6:3000";
+    private static final String CHANNEL_URL = "https://ppsnodejs-szokekaroly.rhcloud.com";
     private static final String CHANNEL_EVENT = "pps_channel";
     private static final String REGISTER = "/login/register_device";
     private static final String SEND = "/home/send_by_device";
@@ -267,8 +269,6 @@ public class MainActivity extends AppCompatActivity {
                     editor.putString(DEVICE, mDevice);
                     editor.commit();
                     LocalBroadcastManager.getInstance(MainActivity.this).unregisterReceiver(mRegisterReceiver);
-                    mSocket.on(mChannel, onNewMessage);
-                    mSocket.connect();
                     setVisibility();
                     getAllMessages();
                 } else {
@@ -351,7 +351,6 @@ public class MainActivity extends AppCompatActivity {
 
     };
 
-
     private void getPreferences() {
         SharedPreferences pref = getSharedPreferences(DEVICE_PREF, MODE_PRIVATE);
         mChannel = pref.getString(CHANNEL, null);
@@ -399,7 +398,7 @@ public class MainActivity extends AppCompatActivity {
                     inputStream = new BufferedInputStream(urlConnection.getInputStream());
                     result = convertInputStreamToString(inputStream);
                 }else{
-                    Log.e("HTTP POST","HTTP hiba:" + statusCode);
+                    Log.e("HTTP POST", params[0] + " hiba:" + statusCode);
                     result = null;
                 }
 
@@ -433,7 +432,7 @@ public class MainActivity extends AppCompatActivity {
                 intent.putExtra("response", result);
                 LocalBroadcastManager.getInstance(getBaseContext()).sendBroadcast(intent);
             } else {
-                Log.e(TAG, "Hiba az adatok fogadásakor");
+                Toast.makeText(MainActivity.this, "Hiba az adatok fogadásakor", Toast.LENGTH_LONG).show();
             }
         }
     }
