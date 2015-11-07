@@ -224,7 +224,7 @@ public class MainActivity extends AppCompatActivity {
         ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo networkInfo = connectivityManager.getActiveNetworkInfo();
         if (networkInfo == null) {
-            Toast.makeText(MainActivity.this, "Az internet nem elérhető, kapcsolaja be a hálózatot!", Toast.LENGTH_SHORT).show();
+            Toast.makeText(MainActivity.this, "Az internet nem elérhető, kapcsolaja be a hálózatot, és indítsa újra az alkalmazást!", Toast.LENGTH_SHORT).show();
         }
         return  networkInfo != null && networkInfo.isConnected();
     }
@@ -303,7 +303,6 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onReceive(Context context, Intent intent) {
             String result = intent.getStringExtra("response");
-            Log.v("getallmsg",result);
             try {
                 JSONArray messages = new JSONArray(result);
                 for (int i = 0; i < messages.length(); i++) {
