@@ -53,10 +53,10 @@ public class MainActivity extends AppCompatActivity {
     public static final String DEVICE_PREF = "device_pref";
     public static final String CHANNEL = "channel";
     public static final String DEVICE = "device";
-    private static final String SERVICE_URL = "http://192.168.0.6/pps/index.php";
-    //private static final String SERVICE_URL = "https://pps-szokekaroly.rhcloud.com/index.php";
-    private static final String CHANNEL_URL = "http://192.168.0.6:3000";
-    //private static final String CHANNEL_URL = "https://ppsnodejs-szokekaroly.rhcloud.com";
+    //private static final String SERVICE_URL = "http://192.168.0.6/pps/index.php";
+    private static final String SERVICE_URL = "https://pps-szokekaroly.rhcloud.com/index.php";
+    //private static final String CHANNEL_URL = "http://192.168.0.6:3000";
+    private static final String CHANNEL_URL = "https://ppsnodejs-szokekaroly.rhcloud.com";
     private static final String CHANNEL_EVENT = "pps_channel";
     private static final String REGISTER = "/login/register_device";
     private static final String SEND = "/home/send_by_device";
