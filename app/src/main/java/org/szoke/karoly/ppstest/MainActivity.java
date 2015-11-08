@@ -53,10 +53,10 @@ public class MainActivity extends AppCompatActivity {
     public static final String DEVICE_PREF = "device_pref";
     public static final String CHANNEL = "channel";
     public static final String DEVICE = "device";
-    //private static final String SERVICE_URL = "http://192.168.0.6/pps/index.php";
-    private static final String SERVICE_URL = "https://pps-szokekaroly.rhcloud.com/index.php";
-    //private static final String CHANNEL_URL = "http://192.168.0.6:3000";
-    private static final String CHANNEL_URL = "https://ppsnodejs-szokekaroly.rhcloud.com";
+    private static final String SERVICE_URL = "http://192.168.0.6/pps/index.php";
+    //private static final String SERVICE_URL = "https://pps-szokekaroly.rhcloud.com/index.php";
+    private static final String CHANNEL_URL = "http://192.168.0.6:3000";
+    //private static final String CHANNEL_URL = "https://ppsnodejs-szokekaroly.rhcloud.com";
     private static final String CHANNEL_EVENT = "pps_channel";
     private static final String REGISTER = "/login/register_device";
     private static final String SEND = "/home/send_by_device";
@@ -91,8 +91,6 @@ public class MainActivity extends AppCompatActivity {
             mSocket = IO.socket(CHANNEL_URL);
         } catch (URISyntaxException e) {
             e.printStackTrace();
-        } catch (Exception e) {
-            e.printStackTrace();
         }
     }
 
@@ -117,7 +115,7 @@ public class MainActivity extends AppCompatActivity {
 
         lvMessages = (ListView) findViewById(R.id.lvMessages);
         mMessages = new ArrayList<>();
-        mAdapter = new ArrayAdapter(MainActivity.this,android.R.layout.simple_list_item_1, mMessages);
+        mAdapter = new ArrayAdapter<>(MainActivity.this,android.R.layout.simple_list_item_1, mMessages);
         lvMessages.setAdapter(mAdapter);
         lvMessages.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
@@ -331,7 +329,12 @@ public class MainActivity extends AppCompatActivity {
                         data = new JSONObject(args[0].toString());
                         try {
                             String status = data.getString("status");
+                            String id = data.getString("id");
                             if (status.equals("OK")) {
+                                if (id.equals("delete")) {
+                                    getAllMessages();
+                                    return;
+                                }
                                 String msg = data.getString("msg");
                                 mMessages.add(0, msg);
                                 mAdapter.notifyDataSetChanged();
@@ -340,8 +343,6 @@ public class MainActivity extends AppCompatActivity {
                             e.printStackTrace();
                         }
                     } catch (JSONException e) {
-                        e.printStackTrace();
-                    } catch (Exception e) {
                         e.printStackTrace();
                     }
                 }
