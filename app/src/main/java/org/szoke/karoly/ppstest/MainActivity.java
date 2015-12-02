@@ -85,7 +85,7 @@ public class MainActivity extends AppCompatActivity {
     private String mDevice;
     private ArrayAdapter mAdapter;
     private ArrayList<String> mMessages;
-    private Socket mSocket;
+    private Socket mSocket; //kommunikációs csatorna kliens inicializálása
     {
         try {
             mSocket = IO.socket(CHANNEL_URL);
@@ -94,6 +94,10 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Activity felület létrehozása, inicializálása
+     * @param savedInstanceState
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -135,6 +139,10 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    /**
+     * Külön szálon elindítja az összes üzenet letöltését. Regisztrál egy BroadcastReceivert a letöltés
+     * elkészülése eseményre.
+     */
     private void getAllMessages() {
         String params;
         if (mChannel != null && mDevice != null) {
@@ -149,7 +157,11 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Attól függően, hogy az eszköz regisztrálva van-e, vagy a regisztrációs részt, vagy az üzenet küldő részt mutatja meg.
+     */
     private void setVisibility() {
+        //regisztráció elrejtése
         if (mDevice != null) {
             tvEmail.setVisibility(View.GONE);
             edEmail.setVisibility(View.GONE);
@@ -165,6 +177,7 @@ public class MainActivity extends AppCompatActivity {
             if ( ! isNetworkAvailable() ) {
                 btSend.setEnabled(false);
             }
+            //üzenet küldő gomb eseménykezelője, külön szálon tölti fel a szerverre az üzenetet
             btSend.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
@@ -183,11 +196,12 @@ public class MainActivity extends AppCompatActivity {
             });
             mSocket.on(mChannel, onNewMessage);
             mSocket.connect();
-        } else {
+        } else {    //regisztráció
             edDevice.setText(Build.MODEL);
             if ( ! isNetworkAvailable() ) {
                 btLogin.setEnabled(false);
             }
+            //regisztráció gomb eseménykezelője, külön szálon kapcsolódik a szerverhez
             btLogin.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
@@ -218,6 +232,10 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Ellenőrzi, hogy a hálózat elérhető-e?
+     * @return TRUE, ha elérhető
+     */
     private boolean isNetworkAvailable() {
         ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo networkInfo = connectivityManager.getActiveNetworkInfo();
@@ -227,12 +245,18 @@ public class MainActivity extends AppCompatActivity {
         return  networkInfo != null && networkInfo.isConnected();
     }
 
+    /**
+     * Ha a program újra az előtérbe kerül, feliratkozás
+     */
     @Override
     protected void onResume() {
         super.onResume();
         LocalBroadcastManager.getInstance(MainActivity.this).registerReceiver(mSendReceiver, new IntentFilter(BROADCAST_SEND));
     }
 
+    /**
+     * Ha aprogram háttérbe kerül leíratkozás,  kímélve az erőforrásokat
+     */
     @Override
     protected void onPause() {
         super.onPause();
@@ -240,6 +264,9 @@ public class MainActivity extends AppCompatActivity {
         LocalBroadcastManager.getInstance(MainActivity.this).unregisterReceiver(mSendReceiver);
     }
 
+    /**
+     * Ha az alkalmazás megsemmisül, bontja a kapcsolatot a kommunikációs csatornával
+     */
     @Override
     public void onDestroy() {
         super.onDestroy();
@@ -250,6 +277,10 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Ez a BroadcastReceiver fogadja az üzenetet, ha a külön szálon indított regisztráció véget ért,
+     * és meg van az eredmény. A kapott adatokat permanensen elmenti, és megjeleníti az üzenetküldést.
+     */
     private BroadcastReceiver mRegisterReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -278,6 +309,11 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
+    /**
+     * Üzenet küldés BroadcastReceivere, a külön szálon történt üzenet feltöltés a szerverre
+     * eredménye aktivizálja, siker esetén elküldi a csatorna kliens segítségével
+     * a kommunikációs csatornába
+     */
     private BroadcastReceiver mSendReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -297,6 +333,9 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
+    /**
+     * Az összes üzenet letöltését végző szál ha kész, ezt hívja meg az üzenetek kiírására.
+     */
     private BroadcastReceiver mGetAllMessages = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -316,6 +355,10 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
+    /**
+     * Kommunikációs csatorna kliens felíratkozása a csatornára. új üzenet
+     * érkezését a run kezeli le, kiírja a listára a szöveget
+     */
     private Emitter.Listener onNewMessage = new Emitter.Listener() {
 
         @Override
@@ -351,21 +394,36 @@ public class MainActivity extends AppCompatActivity {
 
     };
 
+    /**
+     * A program indulásakor beolvassa az adatokat, ha már le vannak tárolva.
+     */
     private void getPreferences() {
         SharedPreferences pref = getSharedPreferences(DEVICE_PREF, MODE_PRIVATE);
         mChannel = pref.getString(CHANNEL, null);
         mDevice = pref.getString(DEVICE, null);
     }
 
+    /**
+     * Belső osztály a külön szálon történő hálózati kommunikáció megvalósítására
+     */
     public class AsyncHttpTask extends AsyncTask<String, Void, String> {
 
         private String localBrodcast;
 
+        /**
+         * Konstruktor
+         * @param broadcast eltárolja, hogy melyik BroadcastReceiverre kell értesítést küldenie
+         */
         public AsyncHttpTask(String broadcast) {
             super();
             this.localBrodcast = broadcast;
         }
 
+        /**
+         * A külön szálon futó hálózati kommunikáció
+         * @param params az URL
+         * @return a kommunikáció eredménye
+         */
         @Override
         protected String doInBackground(String... params) {
             InputStream inputStream;
@@ -409,6 +467,12 @@ public class MainActivity extends AppCompatActivity {
             return result;
         }
 
+        /**
+         * A HTTP kommunikáció során olvasott nyers adatokból szöveget készít.
+         * @param inputStream hálózati csatorna
+         * @return az összeállított szöveg
+         * @throws IOException
+         */
         private String convertInputStreamToString(InputStream inputStream) throws IOException {
 
             BufferedReader bufferedReader = new BufferedReader( new InputStreamReader(inputStream));
@@ -424,6 +488,11 @@ public class MainActivity extends AppCompatActivity {
             return result;
         }
 
+        /**
+         * Miután lefuttott a külön szálon a kommunikáció, itt visszatér az alkalmazás fő szálába,
+         * és Intenten keresztül elküldi az eredményt a BroadcastReceivernek.
+         * @param result
+         */
         @Override
         protected void onPostExecute(String result) {
 
