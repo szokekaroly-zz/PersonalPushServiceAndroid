@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Personal Push Service for Android</string>
+    <string name="title">Cím</string>
+    <string name="message_or_link">Üzenet vagy Link</string>
 </resources>
