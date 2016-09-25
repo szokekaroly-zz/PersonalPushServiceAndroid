@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/PersonalPushServiceTestClient.iml" filepath="$PROJECT_DIR$/PersonalPushServiceTestClient.iml" />
+      <module fileurl="file://$PROJECT_DIR$/PersonaPushServiceAndroid.iml" filepath="$PROJECT_DIR$/PersonaPushServiceAndroid.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
     </modules>
   </component>
