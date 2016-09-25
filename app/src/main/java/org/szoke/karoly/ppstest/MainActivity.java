@@ -73,6 +73,7 @@ public class MainActivity extends AppCompatActivity {
     private EditText edPassword;
     private EditText edDevice;
     private EditText edMessage;
+    private EditText edTitle;
 
     private Button btLogin;
     private Button btSend;
@@ -111,6 +112,7 @@ public class MainActivity extends AppCompatActivity {
         edPassword = (EditText) findViewById(R.id.edPassword);
         edDevice = (EditText) findViewById(R.id.edDevice);
         edMessage = (EditText) findViewById(R.id.edMessage);
+        edTitle = (EditText) findViewById(R.id.edTitle);
 
         btLogin = (Button) findViewById(R.id.btLogin);
         btSend = (Button) findViewById(R.id.btSend);
@@ -173,6 +175,7 @@ public class MainActivity extends AppCompatActivity {
             pbLogin.setVisibility(View.GONE);
             lvMessages.setVisibility(View.VISIBLE);
             edMessage.setVisibility(View.VISIBLE);
+            edTitle.setVisibility(View.VISIBLE);
             btSend.setVisibility(View.VISIBLE);
             if ( ! isNetworkAvailable() ) {
                 btSend.setEnabled(false);
@@ -323,6 +326,7 @@ public class MainActivity extends AppCompatActivity {
                 response = new JSONObject(result);
                 if (response.getString("status").equals("OK")) {
                     edMessage.setText(null);
+                    edTitle.setText(null);
                     mSocket.emit(CHANNEL_EVENT, result);
                 } else {
                     Toast.makeText(getBaseContext(), response.getString("msg"), Toast.LENGTH_LONG).show();

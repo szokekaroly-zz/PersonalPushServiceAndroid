@@ -54,7 +54,14 @@
     <EditText
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:id="@+id/edTitle"
+        android:hint="@string/title"
+        android:visibility="gone" />
+    <EditText
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:id="@+id/edMessage"
+        android:hint="@string/message_or_link"
         android:visibility="gone" />
     <Button
         android:layout_width="wrap_content"
