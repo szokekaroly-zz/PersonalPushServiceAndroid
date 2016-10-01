@@ -12,6 +12,8 @@ import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentManager;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
@@ -28,6 +30,8 @@ import android.widget.Toast;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.szoke.karoly.ppstest.fragment.LoginFragment;
+import org.szoke.karoly.ppstest.fragment.MainFragment;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
@@ -53,6 +57,7 @@ public class MainActivity extends AppCompatActivity {
     public static final String DEVICE_PREF = "device_pref";
     public static final String CHANNEL = "channel";
     public static final String DEVICE = "device";
+    private static final String BROADCAST_REGISTER = "REGISTER";
     //private static final String SERVICE_URL = "http://192.168.0.6/pps/index.php";
     private static final String SERVICE_URL = "https://pps-szokekaroly.rhcloud.com/index.php";
     //private static final String CHANNEL_URL = "http://192.168.0.6:3000";
@@ -61,7 +66,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String REGISTER = "/login/register_device";
     private static final String SEND = "/home/send_by_device";
     private static final String GET_ALL = "/home/get_all_messages";
-    private static final String BROADCAST_REGISTER = "REGISTER";
+
     private static final String BROADCAST_SEND = "SEND";
     private static final String BROADCAST_GET_ALL = "GETALL";
 
@@ -69,9 +74,6 @@ public class MainActivity extends AppCompatActivity {
     private TextView tvPassword;
     private  TextView tvDevice;
 
-    private EditText edEmail;
-    private EditText edPassword;
-    private EditText edDevice;
     private EditText edMessage;
     private EditText edTitle;
 
@@ -108,9 +110,6 @@ public class MainActivity extends AppCompatActivity {
         tvDevice = (TextView) findViewById(R.id.tvDevice);
         tvPassword = (TextView) findViewById(R.id.tvPassword);
 
-        edEmail = (EditText) findViewById(R.id.edEmail);
-        edPassword = (EditText) findViewById(R.id.edPassword);
-        edDevice = (EditText) findViewById(R.id.edDevice);
         edMessage = (EditText) findViewById(R.id.edMessage);
         edTitle = (EditText) findViewById(R.id.edTitle);
 
@@ -159,6 +158,27 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    public void setFragment(){
+        Fragment fragment;
+        FragmentManager fragmentManager = getSupportFragmentManager();
+        if(mDevice!=null){
+            fragment = new MainFragment();
+            fragmentManager.beginTransaction()
+                    .replace(R.id.fragmentContainer, fragment)
+                    .commit();
+        }
+        else {
+            fragment = new LoginFragment();
+            ((LoginFragment)fragment).setOnLoginButtonClickListener(new LoginFragment.OnLoginButtonClickListener() {
+                @Override
+                public void onClick(String params) {
+                    LocalBroadcastManager.getInstance(MainActivity.this).registerReceiver(mRegisterReceiver, new IntentFilter(BROADCAST_REGISTER));
+                    new AsyncHttpTask(BROADCAST_REGISTER).execute(SERVICE_URL + REGISTER,params);
+                }
+            });
+        }
+    }
+
     /**
      * Attól függően, hogy az eszköz regisztrálva van-e, vagy a regisztrációs részt, vagy az üzenet küldő részt mutatja meg.
      */
@@ -166,11 +186,8 @@ public class MainActivity extends AppCompatActivity {
         //regisztráció elrejtése
         if (mDevice != null) {
             tvEmail.setVisibility(View.GONE);
-            edEmail.setVisibility(View.GONE);
             tvPassword.setVisibility(View.GONE);
-            edPassword.setVisibility(View.GONE);
             tvDevice.setVisibility(View.GONE);
-            edDevice.setVisibility(View.GONE);
             btLogin.setVisibility(View.GONE);
             pbLogin.setVisibility(View.GONE);
             lvMessages.setVisibility(View.VISIBLE);
@@ -200,38 +217,7 @@ public class MainActivity extends AppCompatActivity {
             mSocket.on(mChannel, onNewMessage);
             mSocket.connect();
         } else {    //regisztráció
-            edDevice.setText(Build.MODEL);
-            if ( ! isNetworkAvailable() ) {
-                btLogin.setEnabled(false);
-            }
-            //regisztráció gomb eseménykezelője, külön szálon kapcsolódik a szerverhez
-            btLogin.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    if (edEmail.getText() == null) {
-                        Toast.makeText(getBaseContext(), "Email címet kötelező kitölteni!", Toast.LENGTH_LONG).show();
-                        return;
-                    }
-                    if (edPassword.getText() == null) {
-                        Toast.makeText(getBaseContext(), "Jelszó mezőt kötelező kitölteni!", Toast.LENGTH_LONG).show();
-                        return;
-                    }
-                    if (edDevice.getText() == null) {
-                        Toast.makeText(getBaseContext(), "Eszköz nevét kötelező kitölteni!", Toast.LENGTH_LONG).show();
-                        return;
-                    }
-                    String params = null;
-                    try {
-                        params = "email=" + URLEncoder.encode(edEmail.getText().toString(), "UTF-8")
-                         + "&password=" + URLEncoder.encode(edPassword.getText().toString(), "UTF-8") +
-                                "&name=" + URLEncoder.encode(edDevice.getText().toString(), "UTF-8");
-                    } catch (UnsupportedEncodingException e) {
-                        e.printStackTrace();
-                    }
-                    LocalBroadcastManager.getInstance(MainActivity.this).registerReceiver(mRegisterReceiver, new IntentFilter(BROADCAST_REGISTER));
-                    new AsyncHttpTask(BROADCAST_REGISTER).execute(SERVICE_URL + REGISTER,params);
-                }
-            });
+
         }
     }
 
