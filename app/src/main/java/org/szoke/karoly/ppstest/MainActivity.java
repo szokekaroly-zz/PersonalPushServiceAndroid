@@ -30,6 +30,7 @@ import android.widget.Toast;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.szoke.karoly.ppstest.data.Message;
 import org.szoke.karoly.ppstest.fragment.LoginFragment;
 import org.szoke.karoly.ppstest.fragment.MainFragment;
 
@@ -51,7 +52,7 @@ import io.socket.client.IO;
 import io.socket.client.Socket;
 import io.socket.emitter.Emitter;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements MainFragment.BroadcastReceiverManager{
 
     private static final String TAG = "PersonalPushServiceTest";
     public static final String DEVICE_PREF = "device_pref";
@@ -70,24 +71,12 @@ public class MainActivity extends AppCompatActivity {
     private static final String BROADCAST_SEND = "SEND";
     private static final String BROADCAST_GET_ALL = "GETALL";
 
-    private TextView tvEmail;
-    private TextView tvPassword;
-    private  TextView tvDevice;
+    private Emitter.Listener onNewMessage;
 
-    private EditText edMessage;
-    private EditText edTitle;
-
-    private Button btLogin;
-    private Button btSend;
-
-    private ProgressBar pbLogin;
-
-    private ListView lvMessages;
 
     private String mChannel;
     private String mDevice;
-    private ArrayAdapter mAdapter;
-    private ArrayList<String> mMessages;
+
     private Socket mSocket; //kommunikációs csatorna kliens inicializálása
     {
         try {
@@ -105,50 +94,23 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        tvEmail = (TextView) findViewById(R.id.tvEmail);
-        tvDevice = (TextView) findViewById(R.id.tvDevice);
-        tvPassword = (TextView) findViewById(R.id.tvPassword);
-
-        edMessage = (EditText) findViewById(R.id.edMessage);
-        edTitle = (EditText) findViewById(R.id.edTitle);
-
-        btLogin = (Button) findViewById(R.id.btLogin);
-        btSend = (Button) findViewById(R.id.btSend);
-
-        pbLogin = (ProgressBar) findViewById(R.id.pbLogin);
-
-        lvMessages = (ListView) findViewById(R.id.lvMessages);
-        mMessages = new ArrayList<>();
-        mAdapter = new ArrayAdapter<>(MainActivity.this,android.R.layout.simple_list_item_1, mMessages);
-        lvMessages.setAdapter(mAdapter);
-        lvMessages.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(mAdapter.getItem(position).toString()));
-                try {
-                    startActivity(intent);
-                } catch (ActivityNotFoundException e) {
-                    Toast.makeText(MainActivity.this, mAdapter.getItem(position).toString(), Toast.LENGTH_SHORT).show();
-                }
-            }
-        });
-
-        getPreferences();
-        setVisibility();
-        getAllMessages();
-
+        
+        if (isNetworkAvailable()){
+            getPreferences();
+            setFragment();
+        }
+        
     }
 
     /**
      * Külön szálon elindítja az összes üzenet letöltését. Regisztrál egy BroadcastReceivert a letöltés
      * elkészülése eseményre.
      */
-    private void getAllMessages() {
+    private void getAllMessages(BroadcastReceiver getAllMessages) {
         String params;
         if (mChannel != null && mDevice != null) {
             try {
-                LocalBroadcastManager.getInstance(MainActivity.this).registerReceiver(mGetAllMessages, new IntentFilter(BROADCAST_GET_ALL));
+                LocalBroadcastManager.getInstance(MainActivity.this).registerReceiver(getAllMessages, new IntentFilter(BROADCAST_GET_ALL));
                 params = "channel=" + URLEncoder.encode(mChannel, "UTF-8") + "&device=" +
                         URLEncoder.encode(mDevice, "UTF-8");
                 new AsyncHttpTask(BROADCAST_GET_ALL).execute(SERVICE_URL + GET_ALL, params);
@@ -176,48 +138,7 @@ public class MainActivity extends AppCompatActivity {
                     new AsyncHttpTask(BROADCAST_REGISTER).execute(SERVICE_URL + REGISTER,params);
                 }
             });
-        }
-    }
-
-    /**
-     * Attól függően, hogy az eszköz regisztrálva van-e, vagy a regisztrációs részt, vagy az üzenet küldő részt mutatja meg.
-     */
-    private void setVisibility() {
-        //regisztráció elrejtése
-        if (mDevice != null) {
-            tvEmail.setVisibility(View.GONE);
-            tvPassword.setVisibility(View.GONE);
-            tvDevice.setVisibility(View.GONE);
-            btLogin.setVisibility(View.GONE);
-            pbLogin.setVisibility(View.GONE);
-            lvMessages.setVisibility(View.VISIBLE);
-            edMessage.setVisibility(View.VISIBLE);
-            edTitle.setVisibility(View.VISIBLE);
-            btSend.setVisibility(View.VISIBLE);
-            if ( ! isNetworkAvailable() ) {
-                btSend.setEnabled(false);
-            }
-            //üzenet küldő gomb eseménykezelője, külön szálon tölti fel a szerverre az üzenetet
-            btSend.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    if (edMessage.getText() != null) {
-                        String params;
-                        try {
-                            params = "channel=" + URLEncoder.encode(mChannel, "UTF-8") + "&device=" +
-                                    URLEncoder.encode(mDevice, "UTF-8") + "&msg=" + URLEncoder.encode(edMessage.getText().toString(), "UTF-8");
-                            new AsyncHttpTask(BROADCAST_SEND).execute(SERVICE_URL + SEND, params);
-                        } catch (UnsupportedEncodingException e) {
-                            e.printStackTrace();
-                            Toast.makeText(getBaseContext(),"Csatorna hiba, nem lehet üzenetet küldeni.",Toast.LENGTH_LONG).show();
-                        }
-                    }
-                }
-            });
-            mSocket.on(mChannel, onNewMessage);
-            mSocket.connect();
-        } else {    //regisztráció
-
+            fragmentManager.beginTransaction().replace(R.id.fragmentContainer, fragment).commit();
         }
     }
 
@@ -235,36 +156,15 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * Ha a program újra az előtérbe kerül, feliratkozás
-     */
-    @Override
-    protected void onResume() {
-        super.onResume();
-        LocalBroadcastManager.getInstance(MainActivity.this).registerReceiver(mSendReceiver, new IntentFilter(BROADCAST_SEND));
-    }
-
-    /**
      * Ha aprogram háttérbe kerül leíratkozás,  kímélve az erőforrásokat
      */
     @Override
     protected void onPause() {
         super.onPause();
         LocalBroadcastManager.getInstance(MainActivity.this).unregisterReceiver(mRegisterReceiver);
-        LocalBroadcastManager.getInstance(MainActivity.this).unregisterReceiver(mSendReceiver);
     }
 
-    /**
-     * Ha az alkalmazás megsemmisül, bontja a kapcsolatot a kommunikációs csatornával
-     */
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
 
-        if (mSocket.connected()) {
-            mSocket.disconnect();
-            mSocket.off(mChannel, onNewMessage);
-        }
-    }
 
     /**
      * Ez a BroadcastReceiver fogadja az üzenetet, ha a külön szálon indított regisztráció véget ért,
@@ -287,8 +187,7 @@ public class MainActivity extends AppCompatActivity {
                     editor.putString(DEVICE, mDevice);
                     editor.commit();
                     LocalBroadcastManager.getInstance(MainActivity.this).unregisterReceiver(mRegisterReceiver);
-                    setVisibility();
-                    getAllMessages();
+                    setFragment();
                 } else {
                     Toast.makeText(getBaseContext(), response.getString("msg"), Toast.LENGTH_LONG).show();
                 }
@@ -298,91 +197,7 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
-    /**
-     * Üzenet küldés BroadcastReceivere, a külön szálon történt üzenet feltöltés a szerverre
-     * eredménye aktivizálja, siker esetén elküldi a csatorna kliens segítségével
-     * a kommunikációs csatornába
-     */
-    private BroadcastReceiver mSendReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            String result = intent.getStringExtra("response");
-            JSONObject response;
-            try {
-                response = new JSONObject(result);
-                if (response.getString("status").equals("OK")) {
-                    edMessage.setText(null);
-                    edTitle.setText(null);
-                    mSocket.emit(CHANNEL_EVENT, result);
-                } else {
-                    Toast.makeText(getBaseContext(), response.getString("msg"), Toast.LENGTH_LONG).show();
-                }
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-        }
-    };
 
-    /**
-     * Az összes üzenet letöltését végző szál ha kész, ezt hívja meg az üzenetek kiírására.
-     */
-    private BroadcastReceiver mGetAllMessages = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            String result = intent.getStringExtra("response");
-            try {
-                JSONArray messages = new JSONArray(result);
-                for (int i = 0; i < messages.length(); i++) {
-                    JSONObject msg = messages.getJSONObject(i);
-                    String message = msg.getString("message");
-                    mMessages.add(0, message);
-                }
-                mAdapter.notifyDataSetChanged();
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-            LocalBroadcastManager.getInstance(MainActivity.this).unregisterReceiver(mGetAllMessages);
-        }
-    };
-
-    /**
-     * Kommunikációs csatorna kliens felíratkozása a csatornára. új üzenet
-     * érkezését a run kezeli le, kiírja a listára a szöveget
-     */
-    private Emitter.Listener onNewMessage = new Emitter.Listener() {
-
-        @Override
-        public void call(final Object... args) {
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    JSONObject data;
-
-                    try {
-                        data = new JSONObject(args[0].toString());
-                        try {
-                            String status = data.getString("status");
-                            String id = data.getString("id");
-                            if (status.equals("OK")) {
-                                if (id.equals("delete")) {
-                                    getAllMessages();
-                                    return;
-                                }
-                                String msg = data.getString("msg");
-                                mMessages.add(0, msg);
-                                mAdapter.notifyDataSetChanged();
-                            }
-                        } catch (JSONException e) {
-                            e.printStackTrace();
-                        }
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                    }
-                }
-            });
-        }
-
-    };
 
     /**
      * A program indulásakor beolvassa az adatokat, ha már le vannak tárolva.
@@ -392,6 +207,57 @@ public class MainActivity extends AppCompatActivity {
         mChannel = pref.getString(CHANNEL, null);
         mDevice = pref.getString(DEVICE, null);
     }
+
+    @Override
+    public void registGetAllMessagesReciever(BroadcastReceiver getAllMessages) {
+        getAllMessages(getAllMessages);
+    }
+
+    @Override
+    public void registOnNewMessagesListener(Emitter.Listener onNewMessage) {
+        this.onNewMessage = onNewMessage;
+        mSocket.on(mChannel, onNewMessage);
+        mSocket.connect();
+    }
+
+    @Override
+    public void registSendReceiver(BroadcastReceiver sendReceiver) {
+        LocalBroadcastManager.getInstance(MainActivity.this).registerReceiver(sendReceiver, new IntentFilter(BROADCAST_SEND));
+    }
+
+    @Override
+    public void unRegistSendReceiver(BroadcastReceiver sendReceiver) {
+        LocalBroadcastManager.getInstance(MainActivity.this).unregisterReceiver(sendReceiver);
+    }
+
+    @Override
+    public void unRegistOnNewMessagesListener(Emitter.Listener onNewMessage) {
+        if (mSocket.connected()) {
+            mSocket.disconnect();
+            mSocket.off(mChannel, onNewMessage);
+        }
+    }
+
+    @Override
+    public void sendNewMessagesListener(Message message) {
+            String params;
+            try {
+                params = "channel=" + URLEncoder.encode(mChannel, "UTF-8") + "&device=" +
+                        URLEncoder.encode(mDevice, "UTF-8") + "&msg=" + URLEncoder.encode(message.getMessageText(), "UTF-8") +
+                        "&title=" + URLEncoder.encode(message.getTitle(), "UTF-8");
+                new AsyncHttpTask(BROADCAST_SEND).execute(SERVICE_URL + SEND, params);
+            } catch (UnsupportedEncodingException e) {
+                e.printStackTrace();
+                Toast.makeText(getBaseContext(),"Csatorna hiba, nem lehet üzenetet küldeni.",Toast.LENGTH_LONG).show();
+            }
+
+    }
+
+    @Override
+    public void emitSocket(String result) {
+        mSocket.emit(CHANNEL_EVENT, result);
+    }
+
 
     /**
      * Belső osztály a külön szálon történő hálózati kommunikáció megvalósítására

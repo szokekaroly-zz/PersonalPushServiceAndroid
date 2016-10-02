@@ -43,7 +43,7 @@ public class LoginFragment extends Fragment {
         edDevice = (EditText) rootView.findViewById(R.id.edDevice);
         edDevice.setText(Build.MODEL);
 
-        btnLogin = (Button) rootView.findViewById(R.id.btLogin);
+        btnLogin = (Button) rootView.findViewById(R.id.btnLogin);
         setButtonClickListener();
 
         return rootView;
