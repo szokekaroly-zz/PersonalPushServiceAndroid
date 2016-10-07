@@ -6,14 +6,11 @@
     android:paddingLeft="10dp"
     android:paddingRight="10dp">
 
-    <RelativeLayout
+    <android.support.v7.widget.RecyclerView
+        android:id="@+id/rvMessages"
         android:layout_width="match_parent"
-        android:layout_height="400dp">
-        <android.support.v7.widget.RecyclerView
-            android:id="@+id/rvMessages"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent" />
-    </RelativeLayout>
+        android:layout_height="0dp"
+        android:layout_weight="1"/>
 
 
     <android.support.design.widget.TextInputLayout
@@ -27,7 +24,6 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="@string/title" >
-            <requestFocus/>
         </EditText>
     </android.support.design.widget.TextInputLayout>
 

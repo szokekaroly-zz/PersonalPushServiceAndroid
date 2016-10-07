@@ -1,6 +1,5 @@
 package org.szoke.karoly.ppstest;
 
-import android.content.ActivityNotFoundException;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -8,26 +7,17 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
-import android.net.Uri;
 import android.os.AsyncTask;
-import android.os.Build;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.Toolbar;
 import android.util.Log;
-import android.view.View;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.ListView;
-import android.widget.ProgressBar;
-import android.widget.TextView;
+import android.view.MenuItem;
 import android.widget.Toast;
 
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.szoke.karoly.ppstest.data.Message;
@@ -45,14 +35,12 @@ import java.net.HttpURLConnection;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLEncoder;
-import java.util.ArrayList;
-import java.util.List;
 
 import io.socket.client.IO;
 import io.socket.client.Socket;
 import io.socket.emitter.Emitter;
 
-public class MainActivity extends AppCompatActivity implements MainFragment.BroadcastReceiverManager{
+public class MainActivity extends AppCompatActivity implements MainFragment.BroadcastReceiverManager {
 
     private static final String TAG = "PersonalPushServiceTest";
     public static final String DEVICE_PREF = "device_pref";
@@ -72,12 +60,14 @@ public class MainActivity extends AppCompatActivity implements MainFragment.Broa
     private static final String BROADCAST_GET_ALL = "GETALL";
 
     private Emitter.Listener onNewMessage;
+    Toolbar toolbar;
 
 
     private String mChannel;
     private String mDevice;
 
     private Socket mSocket; //kommunikációs csatorna kliens inicializálása
+
     {
         try {
             mSocket = IO.socket(CHANNEL_URL);
@@ -88,18 +78,21 @@ public class MainActivity extends AppCompatActivity implements MainFragment.Broa
 
     /**
      * Activity felület létrehozása, inicializálása
+     *
      * @param savedInstanceState
      */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        
-        if (isNetworkAvailable()){
+
+        toolbar = (Toolbar) findViewById(R.id.toolbar);
+
+        if (isNetworkAvailable()) {
             getPreferences();
             setFragment();
         }
-        
+
     }
 
     /**
@@ -120,30 +113,57 @@ public class MainActivity extends AppCompatActivity implements MainFragment.Broa
         }
     }
 
-    public void setFragment(){
+    public void setFragment() {
         Fragment fragment;
         FragmentManager fragmentManager = getSupportFragmentManager();
-        if(mDevice!=null){
+        if (mDevice != null) {
             fragment = new MainFragment();
             fragmentManager.beginTransaction()
-                    .replace(R.id.fragmentContainer, fragment)
+                    .replace(R.id.fragmentContainer, fragment, MainFragment.TAG)
                     .commit();
-        }
-        else {
+            setToolbar(MainFragment.TAG);
+        } else {
             fragment = new LoginFragment();
-            ((LoginFragment)fragment).setOnLoginButtonClickListener(new LoginFragment.OnLoginButtonClickListener() {
+            ((LoginFragment) fragment).setOnLoginButtonClickListener(new LoginFragment.OnLoginButtonClickListener() {
                 @Override
                 public void onClick(String params) {
                     LocalBroadcastManager.getInstance(MainActivity.this).registerReceiver(mRegisterReceiver, new IntentFilter(BROADCAST_REGISTER));
-                    new AsyncHttpTask(BROADCAST_REGISTER).execute(SERVICE_URL + REGISTER,params);
+                    new AsyncHttpTask(BROADCAST_REGISTER).execute(SERVICE_URL + REGISTER, params);
                 }
             });
-            fragmentManager.beginTransaction().replace(R.id.fragmentContainer, fragment).commit();
+            fragmentManager.beginTransaction().replace(R.id.fragmentContainer, fragment, LoginFragment.TAG).commit();
+            setToolbar(LoginFragment.TAG);
         }
+    }
+
+    private void logout(){
+        mDevice = null;
+        setFragment();
+
+    }
+
+    private void setToolbar(String tag) {
+        toolbar.removeAllViewsInLayout();
+        toolbar.setTitle("Personal Push Services");
+        if (tag.equals(MainFragment.TAG)) {
+            toolbar.inflateMenu(R.menu.activity_main_toolbar);
+            toolbar.setOnMenuItemClickListener(new Toolbar.OnMenuItemClickListener() {
+                @Override
+                public boolean onMenuItemClick(MenuItem item) {
+                    long id = item.getItemId();
+                    if (id == R.id.item_logout) {
+                        //Todo imlement this method
+                    }
+                    return false;
+                }
+            });
+        }
+
     }
 
     /**
      * Ellenőrzi, hogy a hálózat elérhető-e?
+     *
      * @return TRUE, ha elérhető
      */
     private boolean isNetworkAvailable() {
@@ -152,7 +172,7 @@ public class MainActivity extends AppCompatActivity implements MainFragment.Broa
         if (networkInfo == null) {
             Toast.makeText(MainActivity.this, "Az internet nem elérhető, kapcsolaja be a hálózatot, és indítsa újra az alkalmazást!", Toast.LENGTH_SHORT).show();
         }
-        return  networkInfo != null && networkInfo.isConnected();
+        return networkInfo != null && networkInfo.isConnected();
     }
 
     /**
@@ -163,7 +183,6 @@ public class MainActivity extends AppCompatActivity implements MainFragment.Broa
         super.onPause();
         LocalBroadcastManager.getInstance(MainActivity.this).unregisterReceiver(mRegisterReceiver);
     }
-
 
 
     /**
@@ -198,7 +217,6 @@ public class MainActivity extends AppCompatActivity implements MainFragment.Broa
     };
 
 
-
     /**
      * A program indulásakor beolvassa az adatokat, ha már le vannak tárolva.
      */
@@ -230,26 +248,30 @@ public class MainActivity extends AppCompatActivity implements MainFragment.Broa
         LocalBroadcastManager.getInstance(MainActivity.this).unregisterReceiver(sendReceiver);
     }
 
+
     @Override
     public void unRegistOnNewMessagesListener(Emitter.Listener onNewMessage) {
         if (mSocket.connected()) {
             mSocket.disconnect();
             mSocket.off(mChannel, onNewMessage);
+            if (mDevice==null){
+                mChannel=null;
+            }
         }
     }
 
     @Override
     public void sendNewMessagesListener(Message message) {
-            String params;
-            try {
-                params = "channel=" + URLEncoder.encode(mChannel, "UTF-8") + "&device=" +
-                        URLEncoder.encode(mDevice, "UTF-8") + "&msg=" + URLEncoder.encode(message.getMessageText(), "UTF-8") +
-                        "&title=" + URLEncoder.encode(message.getTitle(), "UTF-8");
-                new AsyncHttpTask(BROADCAST_SEND).execute(SERVICE_URL + SEND, params);
-            } catch (UnsupportedEncodingException e) {
-                e.printStackTrace();
-                Toast.makeText(getBaseContext(),"Csatorna hiba, nem lehet üzenetet küldeni.",Toast.LENGTH_LONG).show();
-            }
+        String params;
+        try {
+            params = "channel=" + URLEncoder.encode(mChannel, "UTF-8") + "&device=" +
+                    URLEncoder.encode(mDevice, "UTF-8") + "&msg=" + URLEncoder.encode(message.getMessageText(), "UTF-8") +
+                    "&title=" + URLEncoder.encode(message.getTitle(), "UTF-8");
+            new AsyncHttpTask(BROADCAST_SEND).execute(SERVICE_URL + SEND, params);
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+            Toast.makeText(getBaseContext(), "Csatorna hiba, nem lehet üzenetet küldeni.", Toast.LENGTH_LONG).show();
+        }
 
     }
 
@@ -268,6 +290,7 @@ public class MainActivity extends AppCompatActivity implements MainFragment.Broa
 
         /**
          * Konstruktor
+         *
          * @param broadcast eltárolja, hogy melyik BroadcastReceiverre kell értesítést küldenie
          */
         public AsyncHttpTask(String broadcast) {
@@ -277,6 +300,7 @@ public class MainActivity extends AppCompatActivity implements MainFragment.Broa
 
         /**
          * A külön szálon futó hálózati kommunikáció
+         *
          * @param params az URL
          * @return a kommunikáció eredménye
          */
@@ -308,10 +332,10 @@ public class MainActivity extends AppCompatActivity implements MainFragment.Broa
                 int statusCode = urlConnection.getResponseCode();
 
                 /* 200 HTTP OK */
-                if (statusCode ==  200) {
+                if (statusCode == 200) {
                     inputStream = new BufferedInputStream(urlConnection.getInputStream());
                     result = convertInputStreamToString(inputStream);
-                }else{
+                } else {
                     Log.e("HTTP POST", params[0] + " hiba:" + statusCode);
                     result = null;
                 }
@@ -325,18 +349,19 @@ public class MainActivity extends AppCompatActivity implements MainFragment.Broa
 
         /**
          * A HTTP kommunikáció során olvasott nyers adatokból szöveget készít.
+         *
          * @param inputStream hálózati csatorna
          * @return az összeállított szöveg
          * @throws IOException
          */
         private String convertInputStreamToString(InputStream inputStream) throws IOException {
 
-            BufferedReader bufferedReader = new BufferedReader( new InputStreamReader(inputStream));
+            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
 
             String line;
             String result = "";
 
-            while((line = bufferedReader.readLine()) != null){
+            while ((line = bufferedReader.readLine()) != null) {
                 result += line;
             }
             inputStream.close();
@@ -347,6 +372,7 @@ public class MainActivity extends AppCompatActivity implements MainFragment.Broa
         /**
          * Miután lefuttott a külön szálon a kommunikáció, itt visszatér az alkalmazás fő szálába,
          * és Intenten keresztül elküldi az eredményt a BroadcastReceivernek.
+         *
          * @param result
          */
         @Override

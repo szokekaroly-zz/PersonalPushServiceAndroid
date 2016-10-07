@@ -7,10 +7,21 @@ package org.szoke.karoly.ppstest.data;
 public class Message {
     private String title;
     private String messageText;
+    private String link;
 
-    public Message(String title, String messageText) {
+    public String getLink() {
+        return link;
+    }
+
+    public void setLink(String link) {
+        this.link = link;
+    }
+
+    public Message(String title, String messageText, String link) {
         this.title = title;
         this.messageText = messageText;
+        this.link = link;
+
     }
 
     public String getTitle() {

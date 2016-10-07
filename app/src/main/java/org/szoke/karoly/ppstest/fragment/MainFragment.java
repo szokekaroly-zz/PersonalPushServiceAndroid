@@ -1,13 +1,16 @@
 package org.szoke.karoly.ppstest.fragment;
 
 import android.app.Activity;
+import android.app.DownloadManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
+import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -26,29 +29,38 @@ import org.szoke.karoly.ppstest.MainActivity;
 import org.szoke.karoly.ppstest.R;
 import org.szoke.karoly.ppstest.adapter.MessagesListAdapter;
 import org.szoke.karoly.ppstest.data.Message;
+import org.szoke.karoly.ppstest.decoration.SimpleDividerItemDecoration;
 
+import java.io.FileNotFoundException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 
 import io.socket.client.Socket;
 import io.socket.emitter.Emitter;
 
+import static android.R.attr.filter;
+import static android.content.Context.DOWNLOAD_SERVICE;
+
 /**
  * Created by Adam on 2016. 10. 01..
  */
 
 public class MainFragment extends Fragment {
-    private static final String TAG = "PersonalPushServiceTest";
     public static final String DEVICE_PREF = "device_pref";
     private static final String BROADCAST_REGISTER = "REGISTER";
     //private static final String SERVICE_URL = "http://192.168.0.6/pps/index.php";
     private static final String SERVICE_URL = "https://pps-szokekaroly.rhcloud.com/index.php";
+    private static final String URL = "https://pps-szokekaroly.rhcloud.com/";
     //private static final String CHANNEL_URL = "http://192.168.0.6:3000";
     private static final String CHANNEL_URL = "https://ppsnodejs-szokekaroly.rhcloud.com";
     private static final String CHANNEL_EVENT = "pps_channel";
     private static final String REGISTER = "/login/register_device";
     private static final String SEND = "/home/send_by_device";
     private static final String GET_ALL = "/home/get_all_messages";
+    public static final String TAG = "MAIN_FRAGMENT";
+
+    private DownloadManager dm;
+    private long enqueue;
 
     private static final String BROADCAST_SEND = "SEND";
     private static final String BROADCAST_GET_ALL = "GETALL";
@@ -88,7 +100,25 @@ public class MainFragment extends Fragment {
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
 
-        mMessagesListAdapter = new MessagesListAdapter(mMessages);
+        mMessagesListAdapter = new MessagesListAdapter(mMessages, getContext());
+        mMessagesListAdapter.setOnLinkClickListener(new MessagesListAdapter.OnLinkClickListener() {
+            @Override
+            public void onLinkClick(Intent intent) {
+                startActivity(intent);
+            }
+
+            @Override
+            public void onFileClick(String path, String fileName) {
+                dm = (DownloadManager) getContext().getSystemService(DOWNLOAD_SERVICE);
+
+                DownloadManager.Request request = new DownloadManager.Request(
+                        Uri.parse(URL+path));
+                request.setTitle(fileName);
+                request.allowScanningByMediaScanner();
+                request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+                enqueue = dm.enqueue(request);
+            }
+        });
 
         //create layoutManager
         LinearLayoutManager llm = new LinearLayoutManager(getContext());
@@ -100,6 +130,7 @@ public class MainFragment extends Fragment {
         rvMessages.setAdapter(mMessagesListAdapter);
         rvMessages.setLayoutManager(llm);
         rvMessages.setHasFixedSize(true);
+        rvMessages.addItemDecoration(new SimpleDividerItemDecoration(getResources()));
     }
 
     @Override
@@ -136,6 +167,8 @@ public class MainFragment extends Fragment {
 
     }
 
+
+
     private void initSendButtonClickListener() {
         btnSend.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -146,7 +179,7 @@ public class MainFragment extends Fragment {
                 else if (edMessage.getText().toString().equals("")){
                     edMessage.setError("Kötelező üzenet");
                 } else {
-                    Message message = new Message(edTitle.getText().toString(), edMessage.getText().toString());
+                    Message message = new Message(edTitle.getText().toString(), edMessage.getText().toString(), null);
                     broadcastReceiverManager.sendNewMessagesListener(message);
                 }
             }
@@ -201,8 +234,10 @@ public class MainFragment extends Fragment {
                     JSONObject msg = messages.getJSONObject(i);
                     String messageText = msg.getString("message");
                     String messageTitle = msg.getString("title");
-                    Message message = new Message(messageTitle, messageText);
+                    String messageLink = msg.getString("link");
+                    Message message = new Message(messageTitle, messageText, messageLink);
                     Log.d("TAG_MS", "onReceive: " + messageText);
+                    Log.d(TAG, "onReceive: "+ messageLink);
                     mMessagesListAdapter.addMessages(message);
                 }
                 //mMessagesListAdapter.notifyDataSetChanged();
@@ -239,7 +274,8 @@ public class MainFragment extends Fragment {
                                 }
                                 String msg = data.getString("msg");
                                 String title = data.getString("title");
-                                Message message = new Message(title, msg);
+                                String link = data.getString("link");
+                                Message message = new Message(title, msg, link);
                                 mMessages.add(0, message);
                                 mMessagesListAdapter.notifyDataSetChanged();
                             }

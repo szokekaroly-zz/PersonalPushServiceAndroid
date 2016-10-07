@@ -25,6 +25,7 @@ import java.net.URLEncoder;
  */
 
 public class LoginFragment extends Fragment {
+    public static final String TAG = "LoginFragment";
     OnLoginButtonClickListener onLoginButtonClickListener;
 
     private EditText edEmail;
