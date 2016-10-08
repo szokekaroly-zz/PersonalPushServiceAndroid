@@ -1,3 +1,13 @@
 <resources>
     <string name="app_name">Personal Push Service for Android</string>
+    <string name="title">Cím</string>
+    <string name="message_or_link">Üzenet vagy Link</string>
+    <string name="email">Email</string>
+    <string name="password">Jelszó</string>
+    <string name="device_name">Eszköz neve</string>
+    <string name="button_login">Bejelentkezés</string>
+    <string name="button_send">Küldés</string>
+    <string name="ed_email_error">Email címet kötelező kitölteni!</string>
+    <string name="ed_password_error">Jelszó mezőt kötelező kitölteni!</string>
+    <string name="ed_device_error">Eszköz nevét kötelező kitölteni!</string>
 </resources>

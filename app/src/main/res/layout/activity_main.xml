@@ -3,65 +3,24 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     tools:context=".MainActivity"
     android:orientation="vertical">
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/tvEmail"
-        android:text="Email:"/>
-    <EditText
+
+    <android.support.v7.widget.Toolbar
+        android:id="@+id/toolbar"
+        app:title="PPS"
+        app:titleTextColor="@android:color/white"
+        android:background="@color/primary"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:inputType="textEmailAddress"
-        android:id="@+id/edEmail"/>
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/tvPassword"
-        android:text="Jelszó:"/>
-    <EditText
+        android:layout_height="wrap_content">
+
+    </android.support.v7.widget.Toolbar>
+
+    <FrameLayout android:id="@+id/fragmentContainer"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:id="@+id/edPassword"
-        android:password="true"/>
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/tvDevice"
-        android:text="Eszköz neve:"/>
-    <EditText
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:id="@+id/edDevice"/>
-    <ProgressBar
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:id="@+id/pbLogin"
-        android:visibility="invisible"/>
-    <Button
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/btLogin"
-        android:layout_gravity="right"
-        android:text="Bejelentkezés"/>
-    <ListView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/lvMessages"
-        android:layout_weight="1"
-        android:visibility="gone" />
-    <EditText
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:id="@+id/edMessage"
-        android:visibility="gone" />
-    <Button
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/btSend"
-        android:text="Küldés"
-        android:layout_gravity="right"
-        android:visibility="gone" />
+        android:layout_height="match_parent">
+
+    </FrameLayout>
 
 </LinearLayout>
