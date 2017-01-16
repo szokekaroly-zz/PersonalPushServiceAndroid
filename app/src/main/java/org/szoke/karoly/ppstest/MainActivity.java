@@ -48,9 +48,11 @@ public class MainActivity extends AppCompatActivity implements MainFragment.Broa
     public static final String DEVICE = "device";
     private static final String BROADCAST_REGISTER = "REGISTER";
     //private static final String SERVICE_URL = "http://192.168.0.6/pps/index.php";
-    private static final String SERVICE_URL = "https://pps-szokekaroly.rhcloud.com/index.php";
+    //private static final String SERVICE_URL = "https://pps-szokekaroly.rhcloud.com/index.php";
+    private static final String SERVICE_URL = "http://pps.zapto.org:50080/index.php";
     //private static final String CHANNEL_URL = "http://192.168.0.6:3000";
-    private static final String CHANNEL_URL = "https://ppsnodejs-szokekaroly.rhcloud.com";
+    //private static final String CHANNEL_URL = "https://ppsnodejs-szokekaroly.rhcloud.com";
+    private static final String CHANNEL_URL = "http://pps.zapto.org:3000";
     private static final String CHANNEL_EVENT = "pps_channel";
     private static final String REGISTER = "/login/register_device";
     private static final String SEND = "/home/send_by_device";
